@@ -61,27 +61,7 @@
 
     <div class="card">
       <h2>3 · Options</h2>
-      <p class="desc">Mod name becomes the output root folder inside the zip.</p>
-      <div class="row">
-        <label class="opt">Mod name <input type="text" id="optMod" placeholder="ConvertedMod" style="width:130px" /></label>
-        <label class="opt" title="Library prefix for V-Slice assetPath, e.g. weekend1:art. Empty = mod-local relative path.">Asset prefix <input type="text" id="optLib" placeholder="(none)" style="width:80px" /></label>
-        <label class="opt">BPM fallback <input type="number" id="optBpm" value="120" min="30" max="300" style="width:64px" /></label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label class="opt">Scroll speed <input type="number" id="optSpeed" value="1" step="0.1" min="0.2" max="4" style="width:56px" /></label>
-        <label class="opt">Psych target
-          <select id="optPsychFmt">
-            <option value="psych_v1" selected>psych_v1 (PE 1.0+)</option>
-            <option value="legacy">legacy (PE 0.6.x)</option>
-          </select>
-        </label>
-      </div>
-      <div class="row" style="margin-top:8px">
-        <label class="opt">Player <input type="text" id="optP1" value="bf" style="width:60px" /></label>
-        <label class="opt">Opponent <input type="text" id="optP2" value="dad" style="width:60px" /></label>
-        <label class="opt">GF <input type="text" id="optGf" value="gf" style="width:56px" /></label>
-        <label class="opt">Stage <input type="text" id="optStage" value="stage" style="width:76px" /></label>
-      </div>
+      <p class="desc">Names, BPM and characters are detected from your files automatically.</p>
       <div class="row" style="margin-top:8px">
         <label class="opt"><input type="checkbox" id="optEvents" checked /> events</label>
         <label class="opt"><input type="checkbox" id="optStubs" checked /> script stubs</label>

@@ -97,12 +97,27 @@
 
   function opts() {
     return {
-      direction: S.direction, modName: $('optMod').value.trim(), libPrefix: $('optLib').value.trim(),
-      bpm: Number($('optBpm').value) || 120, speed: Number($('optSpeed').value) || 1,
+      direction: S.direction, modName: detectModName(S.files), libPrefix: '',
+      bpm: 120, speed: 1,
       events: $('optEvents').checked, stubs: $('optStubs').checked, pretty: $('optPretty').checked, flip: $('optFlip').checked,
-      psychFmt: $('optPsychFmt').value, p1: $('optP1').value.trim() || 'bf', p2: $('optP2').value.trim() || 'dad',
-      gf: $('optGf').value.trim() || 'gf', stage: $('optStage').value.trim() || 'stage', song: ''
+      psychFmt: 'psych_v1', p1: 'bf', p2: 'dad',
+      gf: 'gf', stage: 'stage', song: ''
     };
+  }
+  // Output root folder detected from zip structure: mods/Name/... or Name/... -> "Name".
+  function detectModName(files) {
+    const isContent = (s) => /^(data|characters|stages|weeks|songs|music|sounds|images|scripts|custom_events|custom_notetypes|shaders|fonts|videos|pack\.json|_polymod_meta\.json)$/i.test(s);
+    for (const f of files) {
+      const segs = String(f.path || '').replace(/\\/g, '/').split('/');
+      for (let i = 1; i < segs.length; i++) {
+        if (isContent(segs[i])) {
+          const cand = segs[i - 1];
+          if (cand && !/^mods$/i.test(cand)) return cand.replace(/[\\/:*?"<>|]/g, '');
+          if (/^mods$/i.test(cand) && segs[i] !== undefined) return '';
+        }
+      }
+    }
+    return '';
   }
 
   $('convertBtn').onclick = () => {
