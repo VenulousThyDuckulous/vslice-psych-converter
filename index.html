@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FNF Full-Mod Converter — Psych Engine ⇄ V-Slice</title>
+<meta name="description" content="Free in-browser Friday Night Funkin' FULL MOD converter: charts, characters, stages, weeks, dialogue, audio, images and scripts between Psych Engine and V-Slice. Files never leave your PC." />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔄</text></svg>" />
+<link rel="stylesheet" href="css/style.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="js/util.js"></script>
+<script src="js/detect.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/characters.js"></script>
+<script src="js/stages.js"></script>
+<script src="js/weeks.js"></script>
+<script src="js/dialogue.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/mod.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <div class="logo">🔄</div>
+    <div style="flex:1;min-width:260px">
+      <h1>FNF Full-Mod Converter <span style="font-weight:400;color:var(--mut)">— Psych Engine ⇄ V-Slice</span></h1>
+      <p class="sub">Convert <b>entire mods</b> between <b>Psych Engine</b> and <b>V-Slice / vanilla 0.3+</b>: charts, characters, stages, weeks, dialogue, audio, images — plus honest stub scripts with your original code embedded. Runs 100% in your browser.</p>
+      <div class="badges">
+        <span class="badge"><b>Charts</b> ✅ lossless round-trip</span>
+        <span class="badge"><b>Characters · Stages · Weeks · Dialogue</b> ✅ best-effort</span>
+        <span class="badge"><b>Audio · Images</b> ✅ renamed + passed through</span>
+        <span class="badge"><b>Lua ⇄ HScript</b> ⚠️ stubs (logic can't auto-convert)</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>1 · Direction</h2>
+      <p class="desc">Auto-detect counts your files and picks the majority side.</p>
+      <div class="seg" id="dirSeg">
+        <button data-dir="auto" class="on">✨ Auto</button>
+        <button data-dir="p2v">Psych → V-Slice</button>
+        <button data-dir="v2p">V-Slice → Psych</button>
+      </div>
+
+      <h2>2 · Drop your mod</h2>
+      <p class="desc">Drop a <b>mod .zip</b> (whole <kbd>mods/MyMod/…</kbd> folder zipped) <b>or</b> loose files. Everything is matched by path + content.</p>
+      <div class="drop" id="drop">
+        <div style="font-size:34px">📦</div>
+        <b>Drag &amp; drop mod zip or files here, or click to browse</b>
+        <small>Accepts: <kbd>.zip</kbd> · <kbd>.json</kbd> charts, characters, stages, weeks, dialogue · <kbd>.ogg/.mp3</kbd> · <kbd>.png/.xml</kbd> · <kbd>.lua/.hxs</kbd> · <kbd>pack.json</kbd> · <kbd>_polymod_meta.json</kbd></small>
+        <input type="file" id="fileInput" multiple accept=".json,.zip,.ogg,.mp3,.wav,.png,.xml,.lua,.hx,.hxs,.hxc,.txt,.frag,.vert,.ttf,.mp4" style="display:none" />
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn btn-g" id="demoBtn">Load mini-mod demo</button>
+        <button class="btn btn-g" id="clearBtn">Clear</button>
+      </div>
+      <div id="fileTableWrap"></div>
+    </div>
+
+    <div class="card">
+      <h2>3 · Options</h2>
+      <p class="desc">Mod name becomes the output root folder inside the zip.</p>
+      <div class="row">
+        <label class="opt">Mod name <input type="text" id="optMod" placeholder="ConvertedMod" style="width:130px" /></label>
+        <label class="opt" title="Library prefix for V-Slice assetPath, e.g. weekend1:art. Empty = mod-local relative path.">Asset prefix <input type="text" id="optLib" placeholder="(none)" style="width:80px" /></label>
+        <label class="opt">BPM fallback <input type="number" id="optBpm" value="120" min="30" max="300" style="width:64px" /></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="opt">Scroll speed <input type="number" id="optSpeed" value="1" step="0.1" min="0.2" max="4" style="width:56px" /></label>
+        <label class="opt">Psych target
+          <select id="optPsychFmt">
+            <option value="psych_v1" selected>psych_v1 (PE 1.0+)</option>
+            <option value="legacy">legacy (PE 0.6.x)</option>
+          </select>
+        </label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="opt">Player <input type="text" id="optP1" value="bf" style="width:60px" /></label>
+        <label class="opt">Opponent <input type="text" id="optP2" value="dad" style="width:60px" /></label>
+        <label class="opt">GF <input type="text" id="optGf" value="gf" style="width:56px" /></label>
+        <label class="opt">Stage <input type="text" id="optStage" value="stage" style="width:76px" /></label>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <label class="opt"><input type="checkbox" id="optEvents" checked /> events</label>
+        <label class="opt"><input type="checkbox" id="optStubs" checked /> script stubs</label>
+        <label class="opt"><input type="checkbox" id="optPretty" checked /> pretty JSON</label>
+        <label class="opt" title="V-Slice d and Psych psych_v1 both use 0-3 = player, 4-7 = opponent. Legacy Psych lanes are relative to mustHitSection."><input type="checkbox" id="optFlip" checked /> auto-fix sides</label>
+      </div>
+
+      <div class="row" style="margin-top:12px">
+        <button class="btn btn-p" id="convertBtn" disabled>⚡ Convert full mod</button>
+        <button class="btn btn-g" id="zipBtn" disabled>⬇ Download .zip</button>
+      </div>
+      <h2 style="margin-top:16px">Log</h2>
+      <div class="log" id="log">Ready. Drop a mod zip to begin.\n</div>
+      <div id="outputs"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Conversion report preview</h2>
+    <p class="desc">Every input file gets one row after conversion. Statuses: converted · passthrough (copied/renamed) · stub (needs manual rewrite) · consumed (folded into another file) · skipped · error.</p>
+    <div id="reportWrap"><p class="desc">Nothing converted yet.</p></div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>What converts, file by file</h2>
+    <p class="desc">No magic — the exact mapping. Anything code-shaped becomes a stub with your original embedded as comments.</p>
+    <table>
+      <tr><th>Psych Engine</th><th>V-Slice</th><th>How</th></tr>
+      <tr><td><code>data/&lt;song&gt;/&lt;Song&gt;[-diff].json</code> + <code>events.json</code></td><td><code>data/songs/&lt;id&gt;/&lt;id&gt;-chart.json</code> + <code>-metadata.json</code></td><td>Lossless incl. BPM map, scroll speed, holds (±½ step, moonchart-style), <kbd>Alt Animation</kbd> ⇄ <kbd>mom</kbd>, camera events from <kbd>mustHitSection</kbd> flips.</td></tr>
+      <tr><td><code>characters/*.json</code></td><td><code>data/characters/*.json</code></td><td>Anims (prefix/fps/indices/offsets), scale, flip, sing duration, camera/position offsets, health icon. Healthbar colors + vocals_file noted (no equivalent).</td></tr>
+      <tr><td><code>stages/*.json</code></td><td><code>data/stages/*.json</code></td><td>Zoom, char slots + camera offsets, objects → props (parallax, anims, color). Filters/pixel flags noted.</td></tr>
+      <tr><td><code>weeks/*.json</code></td><td><code>data/levels/*.json</code></td><td>Song list, title, background. Unlock chain / difficulties / menu dolls have no equivalent — listed in the report.</td></tr>
+      <tr><td><code>data/&lt;song&gt;/dialogue.json</code></td><td><code>data/dialogue/conversations|speakers|boxes/*.json</code></td><td>Lines mapped; speakers auto-generated from your portrait files; placeholder box included.</td></tr>
+      <tr><td><code>songs/&lt;s&gt;/Inst.ogg</code>, <code>Voices[-X].ogg</code></td><td><code>songs/&lt;id&gt;/Inst.ogg</code>, <code>Voices-&lt;vocalist&gt;.ogg</code></td><td>Renamed by singer (Player→bf etc.). Single Voices file → opponent's file + warning to split if mixed.</td></tr>
+      <tr><td><code>images/**</code> (+<code>.xml</code>), icons</td><td><code>images/**</code></td><td>Copied; health icons renamed both ways (<kbd>icon-x</kbd> ⇄ <kbd>x</kbd>). Animate-atlas folders flagged (Psych needs Sparrow XML).</td></tr>
+      <tr><td><code>*.lua</code> (scripts/events/stages…)</td><td><code>*.hxs</code> stubs</td><td>Logic can NOT auto-convert — stub with TODO + full original embedded as comments.</td></tr>
+      <tr><td><code>pack.json</code></td><td><code>_polymod_meta.json</code></td><td>Title/description mapped; fill in contributors + license.</td></tr>
+    </table>
+    <details><summary>⚠️ Always playtest in-engine</summary>
+      <div class="faq">Custom note types with code, scripted events, shaders, per-song scripts and Animate-atlas art need manual work. The report tells you exactly which files need attention — start with rows marked <b>stub</b> and <b>error</b>.</div>
+    </details>
+  </div>
+
+  <footer>Full-mod converter · runs offline after load (except JSZip CDN) · lane mapping verified vs <a href="https://github.com/MaybeMaru/moonchart" target="_blank" rel="noopener">moonchart</a> + official charts · <a href="https://github.com/FunkinCrew/funkin-modding-docs/" target="_blank" rel="noopener">V-Slice docs</a> · <a href="https://github.com/ShadowMario/FNF-PsychEngine" target="_blank" rel="noopener">Psych Engine</a></footer>
+</div>
+
+<script src="js/app.js"></script>
+</body>
+</html>
