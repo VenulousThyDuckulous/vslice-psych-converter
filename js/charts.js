@@ -32,7 +32,7 @@ window.FNFConv = window.FNFConv || {};
   // psychRecs: [{song, diff, songObj}], extraEvents: [[time, [[name,v1,v2]...]]...] from standalone events.json
   function psychFilesToVSlice(psychRecs, opts, extraEvents) {
     const songId = (opts.song || psychRecs[0].song || 'song').replace(/\s+/g, '').toLowerCase() || 'song';
-    const songName = opts.song || psychRecs[0].songObj.song || songId;
+    const songName = opts.song || C.prettyName(psychRecs[0].songObj.song || songId);
     const first = psychRecs[0].songObj;
     const bpm0 = Number(first.bpm) || opts.bpm;
     let timeChanges = [];

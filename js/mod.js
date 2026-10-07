@@ -3,16 +3,17 @@
 window.FNFConv = window.FNFConv || {};
 (function (C) {
   'use strict';
-  const CONTENT_STARTS = ['data/', 'characters/', 'stages/', 'weeks/', 'songs/', 'music/', 'sounds/', 'images/', 'scripts/', 'custom_events/', 'custom_notetypes/', 'shaders/', 'fonts/', 'videos/', 'pack.json', '_polymod_meta.json'];
-  // strip zip nesting (mods/Name/, Name/) -> path relative to mod root
+  const CONTENT_DIRS = ['data', 'characters', 'stages', 'weeks', 'songs', 'music', 'sounds', 'images', 'scripts', 'custom_events', 'custom_notetypes', 'shaders', 'fonts', 'videos'];
+  const CONTENT_FILES = ['pack.json', '_polymod_meta.json', 'weeklist.txt'];
+  // strip zip nesting (mods/Name/, Name/) -> path relative to mod root.
+  // Segment-based: "X/images/characters/a.png" must keep the images/ prefix.
   function modRel(path) {
-    const p = String(path || '').replace(/\\/g, '/').replace(/^\.\//, '');
-    const low = p.toLowerCase();
-    for (const c of CONTENT_STARTS) {
-      const i = low.indexOf(c);
-      if (i >= 0) return p.slice(i);
+    const segs = String(path || '').replace(/\\/g, '/').replace(/^\.\//, '').split('/').filter((s) => s !== '' && s !== '.');
+    for (let i = 0; i < segs.length; i++) {
+      const s = segs[i].toLowerCase();
+      if (CONTENT_DIRS.indexOf(s) >= 0 || CONTENT_FILES.indexOf(s) >= 0) return segs.slice(i).join('/');
     }
-    return p.split('/').pop();
+    return segs.length ? segs[segs.length - 1] : '';
   }
   function dirOf(rel) { const i = rel.lastIndexOf('/'); return i >= 0 ? rel.slice(0, i) : ''; }
   function baseOf(rel) { return rel.split('/').pop(); }
@@ -64,6 +65,7 @@ window.FNFConv = window.FNFConv || {};
       (groups[folder] = groups[folder] || []).push(r);
     }
     const songIdOf = (folder, recs) => o.song && charts.length === 1 ? C.songId(o.song) : C.songId(folder.split('/').pop());
+    const convertedIds = [];
     for (const [folder, recs] of Object.entries(groups)) {
       const id = songIdOf(folder, recs);
       const extra = [];
@@ -81,7 +83,17 @@ window.FNFConv = window.FNFConv || {};
         out('data/songs/' + id + '/' + id + '-chart.json', enc(chart, o.pretty), { input: folder + ' (' + recs.length + ' chart(s))', status: 'converted', notes: [recs.map((r) => baseOf(r.path) + ': ' + r.notes + ' notes').join('; ')] });
         out('data/songs/' + id + '/' + id + '-metadata.json', enc(meta, o.pretty), { input: '(generated)', status: 'converted', notes: ['difficulties: ' + Object.keys(chart.notes).join(', '), 'BPM changes: ' + meta.timeChanges.length] });
         recs[0]._cast = cast; recs[0]._songId = id; recs[0]._folder = folder;
+        convertedIds.push(id);
       } catch (e) { rows.push({ input: folder, output: '', status: 'error', notes: [String(e.message || e)] }); }
+    }
+    // V-Slice only lists songs in Story/Freeplay when a level includes them.
+    // Psych single-song mods usually have no weeks/ -> auto-generate a level so songs actually show up.
+    const hasWeeks = files.some((f) => f.kind === 'pweek' && f.json);
+    if (!hasWeeks && convertedIds.length) {
+      const lid = C.songId(root || 'custom');
+      const level = { version: '1.0.0', name: root || 'Converted Songs', background: '#F9CF51', songs: convertedIds, visible: true, props: [] };
+      out('data/levels/' + lid + '.json', enc(level, o.pretty),
+        { input: '(generated)', status: 'converted', notes: ['Your Psych mod has no weeks, so this level was auto-generated — without it converted songs are invisible in Story/Freeplay.', 'Songs: ' + convertedIds.join(', ')] });
     }
     const castByFolder = {};
     for (const r of charts) if (r._cast) castByFolder[r._folder] = { cast: r._cast, id: r._songId };
